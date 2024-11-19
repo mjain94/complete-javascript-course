@@ -14,7 +14,7 @@ html {
 body {
   font-family: 'Press Start 2P', sans-serif;
   color: #eee;
-  background-color: #222;
+  background-color: #2e2a2a;
   /* background-color: #60b347; */
 }
 
@@ -71,9 +71,8 @@ h1 {
 
 .between {
   font-size: 1.4rem;
-  position: absolute;
-  top: 2rem;
-  right: 2rem;
+  margin-bottom: 8rem;
+  color: rgb(132, 210, 30);
 }
 
 .again {
@@ -110,7 +109,7 @@ h1 {
 }
 
 .message {
-  margin-bottom: 8rem;
+  margin-bottom: 2rem;
   height: 3rem;
 }
 
