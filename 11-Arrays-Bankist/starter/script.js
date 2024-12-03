@@ -56,9 +56,12 @@ const btnSort = document.querySelector('.btn--sort');
 
 const inputLoginUsername = document.querySelector('.login__input--user');
 const inputLoginPin = document.querySelector('.login__input--pin');
+const formTransfer = document.querySelector('.form--transfer');
 const inputTransferTo = document.querySelector('.form__input--to');
 const inputTransferAmount = document.querySelector('.form__input--amount');
+const formLoan = document.querySelector('.form--loan');
 const inputLoanAmount = document.querySelector('.form__input--loan-amount');
+const formClose = document.querySelector('.form--close');
 const inputCloseUsername = document.querySelector('.form__input--user');
 const inputClosePin = document.querySelector('.form__input--pin');
 
@@ -69,11 +72,11 @@ const displayMovements = function (movements) {
     const movType = movement > 0 ? 'deposit' : 'withdrawal';
     const html = `
       <div class="movements__row">
-        <div class="movements__type movements__type--deposit">${
-          i + 1
-        } ${movType} </div>
+        <div class="movements__type movements__type--${movType}">${
+      i + 1
+    } ${movType} </div>
         <div class="movements__date">3 days ago</div>
-        <div class="movements__value">4 000€</div>
+        <div class="movements__value">${movement} €</div>
       </div>
     `;
 
@@ -83,19 +86,21 @@ const displayMovements = function (movements) {
 
 const calcDisplayBalance = function (movements) {
   const balance = movements.reduce((acc, mov) => acc + mov, 0);
-  labelBalance.textContent = `${balance} EUR`;
+  labelBalance.textContent = `${balance} €`;
 };
 
 const calcDisplaySummary = function (account) {
-  const balIn = account.movements
+  account.sumIn = account.movements
     .filter(mov => mov > 0)
     .reduce((acc, mov) => acc + mov, 0);
-  labelSumIn.textContent = `€${balIn}`;
+  labelSumIn.textContent = `${account.sumIn} €`;
 
-  const balOut = account.movements
+  account.sumOut = account.movements
     .filter(mov => mov < 0)
     .reduce((acc, mov) => acc - mov, 0);
-  labelSumOut.textContent = `€${balOut}`;
+  labelSumOut.textContent = `${account.sumOut} €`;
+
+  account.balance = account.sumIn - account.sumOut;
 
   labelSumInterest.textContent = account.movements
     .filter(mov => mov > 0)
@@ -131,6 +136,8 @@ const validateLogin = function () {
   return account;
 };
 
+let currentAccount;
+
 btnLogin.addEventListener('click', function (e) {
   e.preventDefault();
 
@@ -139,6 +146,7 @@ btnLogin.addEventListener('click', function (e) {
     formLogin.reset();
     alert('Incorrect Login Id or PIN. Try again.');
   } else {
+    currentAccount = account;
     inputLoginUsername.value = inputLoginPin.value = '';
     inputLoginPin.blur();
     labelWelcome.textContent = `Welcome back, ${account.owner.split(' ')[0]}`;
@@ -146,5 +154,91 @@ btnLogin.addEventListener('click', function (e) {
     displayMovements(account.movements);
     calcDisplayBalance(account.movements);
     calcDisplaySummary(account);
+  }
+});
+
+const validateTransfer = function (toId, amount) {
+  const isAmountValid = amount <= currentAccount.balance && amount > 0;
+  const toAccount = accounts.find(account => account.loginId === toId);
+
+  if (!isAmountValid) {
+    alert('Invalid Amount.');
+    return undefined;
+  } else if (!toAccount) {
+    alert('Invalid Account.');
+    return undefined;
+  }
+
+  formTransfer.reset();
+  inputTransferAmount.blur();
+  console.log(toAccount);
+
+  return toAccount;
+};
+
+const addTransfer = function (account, amount) {
+  account.movements.push(amount);
+  amount > 0 ? (account.sumIn += amount) : (account.sumOut -= amount);
+  account.balance += amount;
+};
+
+const updateMovementWithUI = function (transferAmount) {
+  addTransfer(currentAccount, transferAmount);
+  labelBalance.textContent = `${currentAccount.balance} €`;
+  labelSumIn.textContent = `${currentAccount.sumIn} €`;
+  labelSumOut.textContent = `${currentAccount.sumOut} €`;
+
+  const movType = transferAmount > 0 ? 'deposit' : 'withdrawal';
+  const html = `
+      <div class="movements__row">
+        <div class="movements__type movements__type--${movType}">${currentAccount.movements.length} ${movType} </div>
+        <div class="movements__date">3 days ago</div>
+        <div class="movements__value">${transferAmount} €</div>
+      </div>
+    `;
+
+  containerMovements.insertAdjacentHTML('afterbegin', html);
+};
+
+btnTransfer.addEventListener('click', function (e) {
+  e.preventDefault();
+  const toId = inputTransferTo.value;
+  const transferAmount = Number(inputTransferAmount.value);
+
+  const toAccount = validateTransfer(toId, transferAmount);
+  if (!toAccount) return;
+  addTransfer(toAccount, transferAmount);
+
+  // show withdrawal
+  updateMovementWithUI(-1 * transferAmount);
+});
+
+btnLoan.addEventListener('click', function (e) {
+  e.preventDefault();
+  const loanAmount = Number(inputLoanAmount.value);
+
+  if (
+    loanAmount > 0 &&
+    currentAccount.movements.some(mov => mov >= 0.1 * loanAmount)
+  ) {
+    updateMovementWithUI(loanAmount);
+    formLoan.reset();
+  }
+});
+
+btnClose.addEventListener('click', function (e) {
+  e.preventDefault();
+
+  const id = inputCloseUsername.value;
+  const pin = Number(inputClosePin.value);
+  const valid = currentAccount.loginId === id && currentAccount.pin === pin;
+
+  if (valid) {
+    const index = accounts.findIndex(
+      account => account.loginId === id && account.pin === pin
+    );
+    accounts.splice(index, 1);
+    containerApp.style.opacity = 0;
+    formClose.reset();
   }
 });
