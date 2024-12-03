@@ -47,6 +47,7 @@ const labelTimer = document.querySelector('.timer');
 const containerApp = document.querySelector('.app');
 const containerMovements = document.querySelector('.movements');
 
+const formLogin = document.querySelector('.login');
 const btnLogin = document.querySelector('.login__btn');
 const btnTransfer = document.querySelector('.form__btn--transfer');
 const btnLoan = document.querySelector('.form__btn--loan');
@@ -61,16 +62,89 @@ const inputLoanAmount = document.querySelector('.form__input--loan-amount');
 const inputCloseUsername = document.querySelector('.form__input--user');
 const inputClosePin = document.querySelector('.form__input--pin');
 
-/////////////////////////////////////////////////
-/////////////////////////////////////////////////
-// LECTURES
+const displayMovements = function (movements) {
+  console.log(`inner HTML: ${containerMovements.innerHTML}`);
+  containerMovements.innerHTML = '';
+  movements.forEach((movement, i) => {
+    const movType = movement > 0 ? 'deposit' : 'withdrawal';
+    const html = `
+      <div class="movements__row">
+        <div class="movements__type movements__type--deposit">${
+          i + 1
+        } ${movType} </div>
+        <div class="movements__date">3 days ago</div>
+        <div class="movements__value">4 000€</div>
+      </div>
+    `;
 
-const currencies = new Map([
-  ['USD', 'United States dollar'],
-  ['EUR', 'Euro'],
-  ['GBP', 'Pound sterling'],
-]);
+    containerMovements.insertAdjacentHTML('afterbegin', html);
+  });
+};
 
-const movements = [200, 450, -400, 3000, -650, -130, 70, 1300];
+const calcDisplayBalance = function (movements) {
+  const balance = movements.reduce((acc, mov) => acc + mov, 0);
+  labelBalance.textContent = `${balance} EUR`;
+};
 
-/////////////////////////////////////////////////
+const calcDisplaySummary = function (account) {
+  const balIn = account.movements
+    .filter(mov => mov > 0)
+    .reduce((acc, mov) => acc + mov, 0);
+  labelSumIn.textContent = `€${balIn}`;
+
+  const balOut = account.movements
+    .filter(mov => mov < 0)
+    .reduce((acc, mov) => acc - mov, 0);
+  labelSumOut.textContent = `€${balOut}`;
+
+  labelSumInterest.textContent = account.movements
+    .filter(mov => mov > 0)
+    .map(mov => (mov * account.interestRate) / 100)
+    .filter(interest => interest >= 1)
+    .reduce((acc, interest) => acc + interest, 0);
+};
+
+const getLoginId = function (owner) {
+  const id = owner
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ')
+    .split(' ')
+    .map(name => name[0])
+    .join('');
+  console.log(`login id: ${id}, len: ${id.length}`);
+  return id;
+};
+
+accounts.forEach(account => (account.loginId = getLoginId(account.owner)));
+console.log(account1);
+
+const validateLogin = function () {
+  const id = inputLoginUsername.value;
+  const pin = Number(inputLoginPin.value);
+
+  console.log(`id: ${id}, len(id): ${id.length}, pin: ${pin}`);
+  const account = accounts.find(
+    account => account.loginId === id && account.pin === pin
+  );
+
+  return account;
+};
+
+btnLogin.addEventListener('click', function (e) {
+  e.preventDefault();
+
+  const account = validateLogin();
+  if (!account) {
+    formLogin.reset();
+    alert('Incorrect Login Id or PIN. Try again.');
+  } else {
+    inputLoginUsername.value = inputLoginPin.value = '';
+    inputLoginPin.blur();
+    labelWelcome.textContent = `Welcome back, ${account.owner.split(' ')[0]}`;
+    containerApp.style.opacity = 100;
+    displayMovements(account.movements);
+    calcDisplayBalance(account.movements);
+    calcDisplaySummary(account);
+  }
+});
